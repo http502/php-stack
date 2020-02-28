@@ -1,0 +1,99 @@
+FROM php:7.1.32-fpm-stretch
+
+ENV PHP_ENV=${PHP_ENV:-production} \
+    PHALCON_VERSION=${PHALCON_VERSION:-v3.4.3} \
+    ZEPHIR_PARSER_VERSION=${ZEPHIR_PARSER_VERSION:-v1.3.1} \
+    COMPOSER_HOME=/tmp/composer
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        libmcrypt-dev \
+        git \
+        curl \
+        unzip && \
+    savedAptMark="$(apt-mark showmanual)" && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+    libpq-dev \
+    libgmp-dev \
+    libfreetype6-dev \
+    libjpeg62-turbo-dev \
+    libpng-dev \
+    libzip-dev \
+    libxml2-dev \
+    libbz2-dev \
+    libpq-dev \
+    ca-certificates && \
+    mkdir /tmp/phalcon /tmp/zephir-parser && \
+    curl -sSL https://github.com/phalcon/cphalcon/archive/${PHALCON_VERSION}.tar.gz -o /tmp/phalcon/phalcon.tar.gz && \
+    curl -sSL https://github.com/phalcon/php-zephir-parser/archive/${ZEPHIR_PARSER_VERSION}.tar.gz -o /tmp/zephir-parser/zephir-parser.tar.gz && \
+    pecl install psr-0.7.0 && \
+    sh -c 'echo "\n\n"' | pecl install mcrypt-1.0.0 && \
+    pecl install xdebug-2.7.2 && \
+    pecl install igbinary-3.0.1 && \
+    yes | pecl install redis-5.0.2 && \
+    pecl install mongodb-1.6.0 && \
+    docker-php-ext-enable --ini-name docker-php-ext-0-psr.ini psr && \
+    docker-php-ext-enable --ini-name docker-php-ext-0-igbinary.ini igbinary && \
+    docker-php-ext-enable mcrypt xdebug redis mongodb && \
+    docker-php-ext-install -j$(nproc) pgsql gmp mysqli pdo_mysql pdo_pgsql bz2 gd exif gettext zip xmlrpc soap bcmath intl opcache && \
+    cp $PHP_INI_DIR/php.ini-${PHP_ENV} $PHP_INI_DIR/php.ini && \
+    cd /tmp/phalcon && tar xf phalcon.tar.gz --strip-components 1 -C . && \
+    cd build && ./install && \
+    cd /tmp/zephir-parser && tar xf zephir-parser.tar.gz --strip-components 1 -C . && \
+    phpize && ./configure && \
+    make -j4 && make install && \
+    cd /tmp && rm -rf phalcon zephir-parser && \
+    docker-php-ext-enable phalcon zephir_parser && \
+    apt-get autoremove -y && \
+    apt-get clean && \
+    apt-mark auto '.*' > /dev/null; \
+    [ -z "$savedAptMark" ] || apt-mark manual $savedAptMark; \
+    find /usr/local -type f -executable -exec ldd '{}' ';' \
+        | awk '/=>/ { print $(NF-1) }' \
+        | sort -u \
+        | xargs -r dpkg-query --search \
+        | cut -d: -f1 \
+        | sort -u \
+        | xargs -r apt-mark manual \
+    ; \
+    apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
+    find /var/lib/apt/lists -type f -delete && \
+    find /var/cache/apt/archives -type f -delete && \
+    php -m && \
+    curl -sSL http://getcomposer.org/installer -o installer.php && \
+    php installer.php && \
+    rm installer.php && chmod +x composer.phar && \
+    mv composer.phar /usr/bin/composer && \
+    cd /tmp/ && git clone https://github.com/phalcon/phalcon-devtools && cd phalcon-devtools && \
+    composer install -o --ignore-platform-reqs --no-suggest -n && \
+    sed -i 's|"output": "phalcon.phar"|"compression": "BZ2","output": "phalcon.phar"|' box.json && \
+    php -d phar.readonly=0 vendor/bin/box build && chmod +x phalcon.phar && \
+    mv phalcon.phar /usr/local/bin/phalcon && \
+    cd / && \
+    find /tmp -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+
+RUN MUST_BE_ACTIVATED="bcmath bz2 Core ctype curl date dom fileinfo\
+    filter ftp gd exif gettext gmp hash iconv intl json libxml mbstring\
+    mcrypt mongodb mysqli mysqlnd openssl pcre PDO pdo_mysql pdo_pgsql\
+    pdo_sqlite phalcon Phar posix psr readline redis Reflection\
+    session SimpleXML soap SPL sqlite3 standard tokenizer xdebug\
+    xml xmlreader xmlrpc xmlwriter Zend OPcache Zephir Parser zip\
+    zlib Xdebug" && \
+    ACTIVATED="`php -m`" && \
+    ERROR="" && \
+    for m in $MUST_BE_ACTIVATED ; do \
+        MATCHES=""; \
+        for m2 in $ACTIVATED; do \
+            if [ $m2 = $m ] ; then \
+                MATCHES="yes"; \
+            fi; \
+        done; \
+        if [ -z "$MATCHES" ]; then \
+            echo "$m IS NOT ACTIVATED"; \
+            ERROR="yes"; \
+        elif [ "$MATCHES" = "yes" ]; then \
+            echo "$m ok."; \
+        fi; \
+    done ; \
+    [ -z "$ERROR" ] && echo "Modules completed" || exit 2

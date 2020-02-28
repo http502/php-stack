@@ -1,0 +1,95 @@
+FROM php:5.6.40-fpm-stretch
+
+ENV PHP_ENV=${PHP_ENV:-production} \
+    PHALCON_VERSION=${PHALCON_VERSION:-v3.4.3} \
+    COMPOSER_HOME=/tmp/composer
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        libmcrypt-dev \
+        git \
+        curl \
+        unzip && \
+    savedAptMark="$(apt-mark showmanual)" && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+    libpq-dev \
+    libgmp-dev \
+    libfreetype6-dev \
+    libjpeg62-turbo-dev \
+    libpng-dev \
+    libzip-dev \
+    libxml2-dev \
+    libbz2-dev \
+    libpq-dev \
+    ca-certificates && \
+    mkdir /tmp/phalcon && \
+    curl -sSL https://github.com/phalcon/cphalcon/archive/${PHALCON_VERSION}.tar.gz -o /tmp/phalcon/phalcon.tar.gz && \
+    pecl install psr-0.6.0 && \
+    docker-php-ext-install mcrypt && \
+    pecl install igbinary-2.0.8 && \
+    yes | pecl install redis-4.3.0 && \
+    pecl install mongodb-1.6.0 && \
+    pecl install xdebug-2.5.5 && \
+    docker-php-ext-enable --ini-name docker-php-ext-0-psr.ini psr && \
+    docker-php-ext-enable --ini-name docker-php-ext-0-igbinary.ini igbinary && \
+    docker-php-ext-enable mcrypt xdebug redis mongodb && \
+    ln -s /usr/include/x86_64-linux-gnu/gmp.h /usr/include/gmp.h && \
+    docker-php-ext-install -j$(nproc) pgsql gmp mysql mysqli pdo_mysql pdo_pgsql bz2 gd exif gettext zip xmlrpc soap bcmath intl opcache && \
+    cp $PHP_INI_DIR/php.ini-${PHP_ENV} $PHP_INI_DIR/php.ini && \
+    cd /tmp/phalcon && tar xf phalcon.tar.gz --strip-components 1 -C . && \
+    cd build && ./install && \
+    cd /tmp && rm -rf phalcon && \
+    docker-php-ext-enable phalcon && \
+    apt-get autoremove -y && \
+    apt-get clean && \
+    apt-mark auto '.*' > /dev/null; \
+    [ -z "$savedAptMark" ] || apt-mark manual $savedAptMark; \
+    find /usr/local -type f -executable -exec ldd '{}' ';' \
+        | awk '/=>/ { print $(NF-1) }' \
+        | sort -u \
+        | xargs -r dpkg-query --search \
+        | cut -d: -f1 \
+        | sort -u \
+        | xargs -r apt-mark manual \
+    ; \
+    apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false 1>/dev/null; \
+    find /var/lib/apt/lists -type f -delete && \
+    find /var/cache/apt/archives -type f -delete && \
+    php -m && \
+    curl -sSL http://getcomposer.org/installer -o installer.php && \
+    php installer.php && \
+    rm installer.php && chmod +x composer.phar && \
+    mv composer.phar /usr/bin/composer && \
+    cd /tmp/ && git clone https://github.com/phalcon/phalcon-devtools && cd phalcon-devtools && \
+    composer install -o --ignore-platform-reqs --no-suggest -n && \
+    sed -i 's|"output": "phalcon.phar"|"compression": "BZ2","output": "phalcon.phar"|' box.json && \
+    php -d phar.readonly=0 vendor/bin/box build && chmod +x phalcon.phar && \
+    mv phalcon.phar /usr/local/bin/phalcon && \
+    cd / && \
+    find /tmp -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+
+RUN MUST_BE_ACTIVATED="bcmath bz2 Core ctype curl date dom fileinfo\
+    filter ftp gd exif gettext gmp hash iconv intl json libxml mbstring\
+    mcrypt mongodb mysql mysqli mysqlnd openssl pcre PDO pdo_mysql pdo_pgsql\
+    pdo_sqlite phalcon Phar posix psr readline redis Reflection\
+    session SimpleXML soap SPL sqlite3 standard tokenizer xdebug\
+    xml xmlreader xmlrpc xmlwriter Zend OPcache zip\
+    zlib Xdebug" && \
+    ACTIVATED="`php -m`" && \
+    ERROR="" && \
+    for m in $MUST_BE_ACTIVATED ; do \
+        MATCHES=""; \
+        for m2 in $ACTIVATED; do \
+            if [ $m2 = $m ] ; then \
+                MATCHES="yes"; \
+            fi; \
+        done; \
+        if [ -z "$MATCHES" ]; then \
+            echo "$m IS NOT ACTIVATED"; \
+            ERROR="yes"; \
+        elif [ "$MATCHES" = "yes" ]; then \
+            echo "$m ok."; \
+        fi; \
+    done ; \
+    [ -z "$ERROR" ] && echo "Modules completed" || exit 2
