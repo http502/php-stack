@@ -2,7 +2,8 @@ FROM php:7.1.32-fpm-stretch
 
 ENV PHP_ENV=${PHP_ENV:-production} \
     PHALCON_VERSION=${PHALCON_VERSION:-v3.4.3} \
-    ZEPHIR_PARSER_VERSION=${ZEPHIR_PARSER_VERSION:-v1.3.1} \
+    PHALCON_DEVTOOLS_VERSION=${PHALCON_DEVTOOLS_VERSION:-v3.4.11} \
+    ZEPHIR_PARSER_VERSION=${ZEPHIR_PARSER_VERSION:-v1.3.3} \
     COMPOSER_HOME=/tmp/composer
 
 RUN apt-get update && \
@@ -66,7 +67,8 @@ RUN apt-get update && \
     rm installer.php && chmod +x composer.phar && \
     mv composer.phar /usr/bin/composer && \
     cd /tmp/ && git clone https://github.com/phalcon/phalcon-devtools && cd phalcon-devtools && \
-    composer install -o --ignore-platform-reqs --no-suggest -n && \
+    git checkout -f tags/${PHALCON_DEVTOOLS_VERSION} && \
+    composer install -o --ignore-platform-reqs --no-suggest -n 2>/dev/null && \
     sed -i 's|"output": "phalcon.phar"|"compression": "BZ2","output": "phalcon.phar"|' box.json && \
     php -d phar.readonly=0 vendor/bin/box build && chmod +x phalcon.phar && \
     mv phalcon.phar /usr/local/bin/phalcon && \
