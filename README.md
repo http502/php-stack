@@ -11,6 +11,7 @@ All in one php fpm image, Supported frameworks:
 
 ## Available versions:
 
+- 4.4-apache
 - 5.6-fpm
 - 7.1-fpm
 - 7.2-fpm
@@ -302,3 +303,25 @@ Version: **7.4-fpm**
 - zip
 - zlib
 - Xdebug
+
+# Running PHP 4.4
+
+```
+docker run -d -p 8000:80 burhantog/php-stack:4.4-apache
+```
+
+
+Mount document root
+```
+docker run -d -p 8000:80 -v $PWD:/var/www/html burhantog/php-stack:4.4-apache
+```
+
+Change `VirtualHost` config
+```
+docker run -d -p 8000:80 -v $PWD/my-site.conf:/opt/php/4.4/apache.conf burhantog/php-stack:4.4-apache
+```
+
+Override `httpd.conf` config
+```
+docker run -d -p 8000:80 -v $PWD/httpd.conf:/usr/local/apache2/conf/httpd.conf burhantog/php-stack:4.4-apache
+```

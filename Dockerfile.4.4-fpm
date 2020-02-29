@@ -1,0 +1,8 @@
+FROM httpd:2.4
+
+COPY php /opt/php/4.4
+
+RUN echo "Include /opt/php/4.4/conf/apache.conf" >> /usr/local/apache2/conf/httpd.conf && \
+    mkdir -p /var/www/html && \
+    echo '<?php phpinfo();' >> /var/www/html/index.php && \
+    chown -R daemon:daemon /var/www/html
