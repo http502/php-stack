@@ -8,12 +8,13 @@ ENV PHP_ENV=${PHP_ENV:-production} \
 
 RUN sed -i 's|//.*.debian.org|//kartolo.sby.datautama.net.id|g' /etc/apt/sources.list /etc/apt/sources.list.d/* 2>/dev/null
 
-RUN apt-get update && \
+RUN apt-get update 1>/dev/null && \
     apt-get install -y --no-install-recommends \
         libmcrypt-dev \
         git \
         curl \
-        unzip && \
+        unzip \
+        libmagickwand-dev 1>/dev/null && \
     savedAptMark="$(apt-mark showmanual)" && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -26,8 +27,7 @@ RUN apt-get update && \
     libxml2-dev \
     libbz2-dev \
     libpq-dev \
-    ca-certificates \
-    libmagickwand-dev 1>/dev/null \
+    ca-certificates 1>/dev/null \
     && \
     mkdir /tmp/phalcon /tmp/zephir-parser && \
     curl -sSL https://github.com/phalcon/cphalcon/archive/${PHALCON_VERSION}.tar.gz -o /tmp/phalcon/phalcon.tar.gz && \
@@ -51,7 +51,7 @@ RUN apt-get update && \
     make -j4 && make install && \
     cd /tmp && rm -rf phalcon zephir-parser && \
     docker-php-ext-enable phalcon zephir_parser && \
-    apt-get autoremove -y && \
+    apt-get autoremove -y 1>/dev/null && \
     apt-get clean && \
     apt-mark auto '.*' > /dev/null; \
     [ -z "$savedAptMark" ] || apt-mark manual $savedAptMark; \
@@ -71,11 +71,9 @@ RUN apt-get update && \
     php installer.php && \
     rm installer.php && chmod +x composer.phar && \
     mv composer.phar /usr/bin/composer && \
-    cd /tmp/ && git clone https://github.com/phalcon/phalcon-devtools && cd phalcon-devtools && \
-    git checkout -f tags/${PHALCON_DEVTOOLS_VERSION} && \
-    composer install -o --ignore-platform-reqs --no-suggest -n 2>/dev/null && \
-    sed -i 's|"output": "phalcon.phar"|"compression": "BZ2","output": "phalcon.phar"|' box.json && \
-    php -d phar.readonly=0 vendor/bin/box build && chmod +x phalcon.phar && \
+    cd /tmp/ && \
+    curl -sSL https://github.com/phalcon/phalcon-devtools/releases/download/v4.0.1/phalcon.phar -o phalcon.phar && \
+    chmod +x phalcon.phar && \
     mv phalcon.phar /usr/local/bin/phalcon && \
     cd / && \
     find /tmp -mindepth 1 -maxdepth 1 -exec rm -rf {} +
