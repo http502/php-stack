@@ -7,7 +7,7 @@ LATEST_VERSION=7.3-fpm
 
 for FILENAME in Dockerfile.* ; do
     f=${FILENAME#*.}
-    docker build -t $BASE_NAME:$f --rm -f $FILENAME .
+    [ $f != "4.4-fpm" ] && docker build -t $BASE_NAME:$f --force-rm --rm -f $FILENAME .
 done
 
 LATEST="`docker images -q $BASE_NAME:$LATEST_VERSION`"

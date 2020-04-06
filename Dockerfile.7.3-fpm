@@ -6,6 +6,8 @@ ENV PHP_ENV=${PHP_ENV:-production} \
     ZEPHIR_PARSER_VERSION=${ZEPHIR_PARSER_VERSION:-v1.3.3} \
     COMPOSER_HOME=/tmp/composer
 
+RUN sed -i 's|//.*.debian.org|//kartolo.sby.datautama.net.id|g' /etc/apt/sources.list /etc/apt/sources.list.d/* 2>/dev/null
+
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         libmcrypt-dev \
@@ -23,7 +25,7 @@ RUN apt-get update && \
     libxml2-dev \
     libbz2-dev \
     libpq-dev \
-    libmagickwand-dev \
+    libmagickwand-dev 1>/dev/null \
     && \
     mkdir /tmp/phalcon /tmp/zephir-parser && \
     curl -sSL https://github.com/phalcon/cphalcon/archive/${PHALCON_VERSION}.tar.gz -o /tmp/phalcon/phalcon.tar.gz && \
@@ -33,9 +35,9 @@ RUN apt-get update && \
     pecl install xdebug-2.7.2 && \
     pecl install redis-5.0.2 && \
     pecl install mongodb-1.6.0 && \
-    pecl install imagick-3.4.4 && \
+    yes | pecl install imagick-3.4.4 && \
     docker-php-ext-enable --ini-name docker-php-ext-0-psr.ini psr && \
-    docker-php-ext-enable mcrypt xdebug redis mongodb && \
+    docker-php-ext-enable mcrypt xdebug redis mongodb imagick && \
     docker-php-ext-install -j$(nproc) pgsql gmp mysqli pdo_mysql pdo_pgsql bz2 gd exif gettext zip xmlrpc soap bcmath intl opcache && \
     cp $PHP_INI_DIR/php.ini-${PHP_ENV} $PHP_INI_DIR/php.ini && \
     cd /tmp/phalcon && tar xf phalcon.tar.gz --strip-components 1 -C . && \
@@ -78,7 +80,7 @@ RUN MUST_BE_ACTIVATED="bcmath bz2 Core ctype curl date dom fileinfo\
     mcrypt mongodb mysqli mysqlnd openssl pcre PDO pdo_mysql pdo_pgsql\
     pdo_sqlite phalcon Phar posix psr readline redis Reflection\
     session SimpleXML sodium soap SPL sqlite3 standard tokenizer xdebug\
-    xml xmlreader xmlrpc xmlwriter OPcache Zephir Parser zip\
+    xml xmlreader xmlrpc xmlwriter OPcache Zephir Parser zip imagick\
     zlib Xdebug" && \
     ACTIVATED="`php -m`" && \
     ERROR="" && \

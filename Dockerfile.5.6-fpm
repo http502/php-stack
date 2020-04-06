@@ -5,6 +5,8 @@ ENV PHP_ENV=${PHP_ENV:-production} \
     PHALCON_DEVTOOLS_VERSION=${PHALCON_DEVTOOLS_VERSION:-v3.4.11} \
     COMPOSER_HOME=/tmp/composer
 
+RUN sed -i 's|//.*.debian.org|//kartolo.sby.datautama.net.id|g' /etc/apt/sources.list /etc/apt/sources.list.d/* 2>/dev/null
+
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         libmcrypt-dev \
@@ -23,18 +25,21 @@ RUN apt-get update && \
     libxml2-dev \
     libbz2-dev \
     libpq-dev \
-    ca-certificates && \
+    ca-certificates \
+    libmagickwand-dev 1>/dev/null \
+    && \
     mkdir /tmp/phalcon && \
     curl -sSL https://github.com/phalcon/cphalcon/archive/${PHALCON_VERSION}.tar.gz -o /tmp/phalcon/phalcon.tar.gz && \
     pecl install psr-0.6.0 && \
     docker-php-ext-install mcrypt && \
     pecl install igbinary-2.0.8 && \
     yes | pecl install redis-4.3.0 && \
+    yes | pecl install imagick-3.4.4 && \
     pecl install mongodb-1.6.0 && \
     pecl install xdebug-2.5.5 && \
     docker-php-ext-enable --ini-name docker-php-ext-0-psr.ini psr && \
     docker-php-ext-enable --ini-name dock7.4er-php-ext-0-igbinary.ini igbinary && \
-    docker-php-ext-enable mcrypt xdebug redis mongodb && \
+    docker-php-ext-enable mcrypt xdebug redis mongodb imagick && \
     ln -s /usr/include/x86_64-linux-gnu/gmp.h /usr/include/gmp.h && \
     docker-php-ext-install -j$(nproc) pgsql gmp mysql mysqli pdo_mysql pdo_pgsql bz2 gd exif gettext zip xmlrpc soap bcmath intl opcache && \
     cp $PHP_INI_DIR/php.ini-${PHP_ENV} $PHP_INI_DIR/php.ini && \
