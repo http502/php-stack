@@ -87,7 +87,7 @@ RUN apt-get update >/dev/null && \
     cd / && \
     find /tmp -mindepth 1 -maxdepth 1 -exec rm -rf {} +
 
-RUN MUST_BE_ACTIVATED="bcmath bz2 Core ctype curl date dom fileinfo\
+RUN MUST_BE_ACTIVATED="bcmath bz2 Core ctype curl date dom igbinary fileinfo\
     filter ftp gd exif gettext gmp hash iconv intl json libxml mbstring\
     mcrypt mongodb mysql mysqli mysqlnd openssl pcre PDO pdo_mysql pdo_pgsql\
     pdo_sqlite phalcon Phar posix psr readline redis Reflection\
