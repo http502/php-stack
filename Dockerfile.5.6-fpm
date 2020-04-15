@@ -6,7 +6,6 @@ ENV PHP_ENV=${PHP_ENV:-production} \
     COMPOSER_HOME=/tmp/composer
 
 COPY phalcon-3.4.11.phar /usr/local/bin/phalcon
-RUN sed -i 's|//.*.debian.org|//kartolo.sby.datautama.net.id|g' /etc/apt/sources.list 2>/dev/null
 
 RUN apt-get update >/dev/null && \
     apt-get install -y --no-install-recommends \
@@ -16,7 +15,7 @@ RUN apt-get update >/dev/null && \
         libmagickwand-dev \
         unzip >/dev/null && \
     savedAptMark="$(apt-mark showmanual)" && \
-    apt-get update && \
+    apt-get update >/dev/null && \
     apt-get install -y --no-install-recommends \
     libpq-dev \
     libgmp-dev \
@@ -29,28 +28,43 @@ RUN apt-get update >/dev/null && \
     libpq-dev \
     ca-certificates >/dev/null \
     && \
-    mkdir /tmp/phalcon && \
+    mkdir -p /tmp/phalcon && \
     curl -sSL https://github.com/phalcon/cphalcon/archive/${PHALCON_VERSION}.tar.gz -o /tmp/phalcon/phalcon.tar.gz && \
-    pecl install psr-0.6.0 && \
-    docker-php-ext-install mcrypt && \
-    pecl install igbinary-2.0.8 && \
-    yes | pecl install redis-4.3.0 && \
-    yes | pecl install imagick-3.4.4 && \
-    pecl install mongodb-1.6.0 && \
-    pecl install xdebug-2.5.5 && \
+    pecl install psr-0.6.0 >/dev/null && \
+    docker-php-ext-install mcrypt >/dev/null && \
+    pecl install igbinary-2.0.8 >/dev/null && \
+    yes | pecl install redis-4.3.0 >/dev/null && \
+    yes | pecl install imagick-3.4.4 >/dev/null && \
+    pecl install mongodb-1.6.0 >/dev/null && \
+    pecl install xdebug-2.5.5 >/dev/null && \
     docker-php-ext-enable --ini-name docker-php-ext-0-psr.ini psr && \
-    docker-php-ext-enable --ini-name dock7.4er-php-ext-0-igbinary.ini igbinary && \
+    docker-php-ext-enable --ini-name docker-php-ext-0-igbinary.ini igbinary && \
     docker-php-ext-enable mcrypt xdebug redis mongodb imagick && \
     ln -s /usr/include/x86_64-linux-gnu/gmp.h /usr/include/gmp.h && \
-    docker-php-ext-install -j$(nproc) pgsql gmp mysql mysqli pdo_mysql pdo_pgsql bz2 gd exif gettext zip xmlrpc soap bcmath intl opcache && \
+    docker-php-ext-install -j$(nproc) pgsql >/dev/null && \
+    docker-php-ext-install -j$(nproc) gmp >/dev/null && \
+    docker-php-ext-install -j$(nproc) mysql >/dev/null && \
+    docker-php-ext-install -j$(nproc) mysqli >/dev/null && \
+    docker-php-ext-install -j$(nproc) pdo_mysql >/dev/null && \
+    docker-php-ext-install -j$(nproc) pdo_pgsql >/dev/null && \
+    docker-php-ext-install -j$(nproc) bz2 >/dev/null && \
+    docker-php-ext-install -j$(nproc) gd >/dev/null && \
+    docker-php-ext-install -j$(nproc) exif >/dev/null && \
+    docker-php-ext-install -j$(nproc) gettext >/dev/null && \
+    docker-php-ext-install -j$(nproc) zip >/dev/null && \
+    docker-php-ext-install -j$(nproc) xmlrpc >/dev/null && \
+    docker-php-ext-install -j$(nproc) soap >/dev/null && \
+    docker-php-ext-install -j$(nproc) bcmath >/dev/null && \
+    docker-php-ext-install -j$(nproc) intl >/dev/null && \
+    docker-php-ext-install -j$(nproc) opcache >/dev/null && \
     cp $PHP_INI_DIR/php.ini-${PHP_ENV} $PHP_INI_DIR/php.ini && \
     cd /tmp/phalcon && tar xf phalcon.tar.gz --strip-components 1 -C . && \
-    cd build && ./install && \
+    cd build && ./install 1>/dev/null && \
     cd /tmp && rm -rf phalcon && \
     docker-php-ext-enable phalcon && \
-    apt-get autoremove -y >/dev/null && \
+    apt-get autoremove -y && \
     apt-get clean && \
-    apt-mark auto '.*' > /dev/null; \
+    apt-mark auto '.*'; \
     [ -z "$savedAptMark" ] || apt-mark manual $savedAptMark; \
     find /usr/local -type f -executable -exec ldd '{}' ';' \
         | awk '/=>/ { print $(NF-1) }' \
@@ -60,11 +74,11 @@ RUN apt-get update >/dev/null && \
         | sort -u \
         | xargs -r apt-mark manual \
     ; \
-    apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false 1>/dev/null; \
+    apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
     find /var/lib/apt/lists -type f -delete && \
     find /var/cache/apt/archives -type f -delete && \
     php -m && \
-    curl -sSL http://getcomposer.org/installer -o installer.php && \
+    curl -sSL https://getcomposer.org/installer -o installer.php && \
     php installer.php && \
     rm installer.php && chmod +x composer.phar && \
     mv composer.phar /usr/bin/composer && \
@@ -79,7 +93,7 @@ RUN MUST_BE_ACTIVATED="bcmath bz2 Core ctype curl date dom fileinfo\
     pdo_sqlite phalcon Phar posix psr readline redis Reflection\
     session SimpleXML soap SPL sqlite3 standard tokenizer xdebug\
     xml xmlreader xmlrpc xmlwriter Zend OPcache zip\
-    zlib Xdebug" && \
+    zlib Xdebug imagick" && \
     ACTIVATED="`php -m`" && \
     ERROR="" && \
     for m in $MUST_BE_ACTIVATED ; do \
