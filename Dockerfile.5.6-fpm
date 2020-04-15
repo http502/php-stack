@@ -59,12 +59,12 @@ RUN apt-get update >/dev/null && \
     docker-php-ext-install -j$(nproc) opcache >/dev/null && \
     cp $PHP_INI_DIR/php.ini-${PHP_ENV} $PHP_INI_DIR/php.ini && \
     cd /tmp/phalcon && tar xf phalcon.tar.gz --strip-components 1 -C . && \
-    cd build && ./install 1>/dev/null && \
+    cd build && ./install >/dev/null && \
     cd /tmp && rm -rf phalcon && \
     docker-php-ext-enable phalcon && \
-    apt-get autoremove -y && \
+    apt-get autoremove -y >/dev/null && \
     apt-get clean && \
-    apt-mark auto '.*'; \
+    apt-mark auto '.*' >/dev/null; \
     [ -z "$savedAptMark" ] || apt-mark manual $savedAptMark; \
     find /usr/local -type f -executable -exec ldd '{}' ';' \
         | awk '/=>/ { print $(NF-1) }' \
@@ -74,7 +74,7 @@ RUN apt-get update >/dev/null && \
         | sort -u \
         | xargs -r apt-mark manual \
     ; \
-    apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
+    apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false >/dev/null; \
     find /var/lib/apt/lists -type f -delete && \
     find /var/cache/apt/archives -type f -delete && \
     php -m && \
